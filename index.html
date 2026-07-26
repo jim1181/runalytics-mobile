@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Runalytics Tile Checker</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.35;
+    }
+
+    body {
+      margin: 0;
+      padding: 1rem;
+      max-width: 44rem;
+      margin-inline: auto;
+      background: Canvas;
+      color: CanvasText;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-block: 0 0.25rem;
+    }
+
+    h2 {
+      font-size: 1.05rem;
+      margin-block: 1.25rem 0.5rem;
+    }
+
+    p {
+      margin-block: 0.35rem;
+    }
+
+    .card {
+      border: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+      border-radius: 0.9rem;
+      padding: 1rem;
+      margin-block: 1rem;
+      background: color-mix(in srgb, CanvasText 4%, Canvas);
+    }
+
+    label {
+      display: block;
+      font-weight: 650;
+      margin-block: 0.75rem 0.25rem;
+    }
+
+    input,
+    button {
+      width: 100%;
+      box-sizing: border-box;
+      font: inherit;
+      border-radius: 0.7rem;
+      border: 1px solid color-mix(in srgb, CanvasText 22%, transparent);
+      padding: 0.75rem;
+    }
+
+    button {
+      border: 0;
+      background: #007aff;
+      color: white;
+      font-weight: 700;
+      margin-block-start: 0.75rem;
+    }
+
+    button.secondary {
+      background: color-mix(in srgb, CanvasText 12%, Canvas);
+      color: CanvasText;
+      border: 1px solid color-mix(in srgb, CanvasText 22%, transparent);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+    }
+
+    .result {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .visited {
+      color: #198754;
+    }
+
+    .new {
+      color: #ff3b30;
+    }
+
+    .muted {
+      color: color-mix(in srgb, CanvasText 62%, transparent);
+      font-size: 0.92rem;
+    }
+
+    code {
+      word-break: break-word;
+      background: color-mix(in srgb, CanvasText 9%, Canvas);
+      padding: 0.1rem 0.25rem;
+      border-radius: 0.3rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Runalytics Tile Checker</h1>
+  <p class="muted">Offline-ish helper for answering: have I been in this 250m tile before?</p>
+
+  <section class="card">
+    <h2>1. Load tile lookup CSV</h2>
+    <p class="muted">Choose <code>mobile_tile_lookup_250m.csv</code> from iCloud Drive / Files.</p>
+    <input id="csvFile" type="file" accept=".csv,text/csv">
+    <button id="loadCsvButton" class="secondary" type="button" onclick="loadSelectedCsv()">Load selected CSV</button>
+    <p id="csvStatus" class="muted">JavaScript has not started yet. If this message stays, open the file in Safari rather than Files preview.</p>
+  </section>
+
+  <section class="card">
+    <h2>2. Check current location</h2>
+    <button id="locationButton" type="button" disabled>Use my current location</button>
+    <p class="muted">If Safari blocks location for a local file, paste coordinates below.</p>
+
+    <label for="latitude">Latitude</label>
+    <input id="latitude" inputmode="decimal" placeholder="e.g. 50.6200">
+
+    <label for="longitude">Longitude</label>
+    <input id="longitude" inputmode="decimal" placeholder="e.g. -3.4100">
+
+    <button id="manualButton" class="secondary" type="button" disabled>Check pasted coordinates</button>
+  </section>
+
+  <section class="card">
+    <h2>Result</h2>
+    <p id="result" class="result">Load a lookup file, then check a location.</p>
+    <p id="details" class="muted"></p>
+  </section>
+
+  <script>
+    const TILE_SIZE_M = 250;
+    const EARTH_HALF_CIRCUMFERENCE_M = 20037508.34;
+
+    const state = {
+      lookup: new Map(),
+      filename: null
+    };
+
+    const csvFile = document.getElementById("csvFile");
+    const loadCsvButton = document.getElementById("loadCsvButton");
+    const csvStatus = document.getElementById("csvStatus");
+    const locationButton = document.getElementById("locationButton");
+    const manualButton = document.getElementById("manualButton");
+    const latitudeInput = document.getElementById("latitude");
+    const longitudeInput = document.getElementById("longitude");
+    const result = document.getElementById("result");
+    const details = document.getElementById("details");
+
+    function setReady(isReady) {
+      locationButton.disabled = !isReady;
+      manualButton.disabled = !isReady;
+    }
+
+    function parseCsv(text) {
+      const lines = text.trim().split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) {
+        throw new Error("CSV did not contain any tile rows.");
+      }
+
+      const headers = lines[0].split(",").map((header) => header.trim());
+      const required = [
+        "tile_id",
+        "tile_x",
+        "tile_y",
+        "visit_count",
+        "first_seen_date",
+        "latest_seen_date"
+      ];
+      for (const column of required) {
+        if (!headers.includes(column)) {
+          throw new Error(`CSV is missing required column: ${column}`);
+        }
+      }
+
+      const index = Object.fromEntries(headers.map((header, i) => [header, i]));
+      const lookup = new Map();
+      for (const line of lines.slice(1)) {
+        const cells = line.split(",");
+        const tileId = cells[index.tile_id];
+        if (!tileId) continue;
+        lookup.set(tileId, {
+          tileId,
+          tileX: cells[index.tile_x],
+          tileY: cells[index.tile_y],
+          visitCount: cells[index.visit_count],
+          firstSeenDate: cells[index.first_seen_date],
+          latestSeenDate: cells[index.latest_seen_date]
+        });
+      }
+      return lookup;
+    }
+
+    function readFileAsText(file) {
+      if (file.text) {
+        return file.text();
+      }
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error("FileReader failed"));
+        reader.readAsText(file);
+      });
+    }
+
+    function lonLatToWebMercator(longitude, latitude) {
+      const x = longitude * EARTH_HALF_CIRCUMFERENCE_M / 180;
+      const yDegrees = Math.log(Math.tan((90 + latitude) * Math.PI / 360)) / (Math.PI / 180);
+      const y = yDegrees * EARTH_HALF_CIRCUMFERENCE_M / 180;
+      return { x, y };
+    }
+
+    function coordinateToTileId(latitude, longitude) {
+      const { x, y } = lonLatToWebMercator(longitude, latitude);
+      const tileX = Math.floor(x / TILE_SIZE_M) * TILE_SIZE_M;
+      const tileY = Math.floor(y / TILE_SIZE_M) * TILE_SIZE_M;
+      return {
+        tileId: `${tileX}_${tileY}`,
+        tileX,
+        tileY,
+        x,
+        y
+      };
+    }
+
+    function showLookup(latitude, longitude) {
+      const tile = coordinateToTileId(latitude, longitude);
+      const visit = state.lookup.get(tile.tileId);
+
+      if (visit) {
+        result.innerHTML = `<span class="visited">Visited before</span>`;
+        details.innerHTML = [
+          `Tile: <code>${tile.tileId}</code>`,
+          `Visits: <strong>${visit.visitCount}</strong>`,
+          `First seen: <strong>${visit.firstSeenDate}</strong>`,
+          `Latest seen: <strong>${visit.latestSeenDate}</strong>`
+        ].join("<br>");
+      } else {
+        result.innerHTML = `<span class="new">No previous visit found</span>`;
+        details.innerHTML = [
+          `Tile: <code>${tile.tileId}</code>`,
+          `This 250m tile was not found in the loaded lookup file.`
+        ].join("<br>");
+      }
+    }
+
+    window.loadSelectedCsv = async function loadSelectedCsv() {
+      const file = csvFile.files[0];
+      if (!file) {
+        csvStatus.textContent = "No CSV selected yet. Tap Choose File first.";
+        return;
+      }
+
+      try {
+        csvStatus.textContent = `Loading ${file.name}…`;
+        const text = await readFileAsText(file);
+        state.lookup = parseCsv(text);
+        state.filename = file.name;
+        csvStatus.textContent = `${file.name} loaded · ${state.lookup.size.toLocaleString()} tiles`;
+        setReady(true);
+        result.textContent = "Lookup loaded. Check your location.";
+        details.textContent = "";
+      } catch (error) {
+        state.lookup = new Map();
+        setReady(false);
+        csvStatus.textContent = `Could not load lookup: ${error.message}`;
+      }
+    };
+
+    csvFile.addEventListener("change", () => {
+      const file = csvFile.files[0];
+      if (file) {
+        csvStatus.textContent = `${file.name} selected. Tap "Load selected CSV".`;
+      }
+    });
+
+    loadCsvButton.addEventListener("click", loadSelectedCsv);
+
+    csvStatus.textContent = "Checker ready. Choose the CSV file.";
+
+    locationButton.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        result.textContent = "Location is not available in this browser.";
+        return;
+      }
+
+      result.textContent = "Getting current location…";
+      details.textContent = "";
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          latitudeInput.value = latitude.toFixed(6);
+          longitudeInput.value = longitude.toFixed(6);
+          showLookup(latitude, longitude);
+        },
+        (error) => {
+          result.textContent = "Could not get current location.";
+          details.textContent = error.message || "Try pasted coordinates instead.";
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 30000
+        }
+      );
+    });
+
+    manualButton.addEventListener("click", () => {
+      const latitude = Number(latitudeInput.value);
+      const longitude = Number(longitudeInput.value);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        result.textContent = "Please enter valid latitude and longitude.";
+        details.textContent = "";
+        return;
+      }
+      showLookup(latitude, longitude);
+    });
+  </script>
+</body>
+</html>
