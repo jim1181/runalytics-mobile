@@ -1,0 +1,11 @@
+{
+  "name": "Tile Hunter",
+  "short_name": "Tile Hunter",
+  "description": "A standalone tile-collection field game using a private local Runalytics tile lookup CSV.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait"
+}

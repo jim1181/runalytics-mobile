@@ -1,0 +1,1131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Tile Hunter</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --card: #172033;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --line: rgba(255, 255, 255, 0.12);
+      --blue: #3b82f6;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --purple: #a855f7;
+      --slate: #64748b;
+      --yellow: #fde047;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.35;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(59, 130, 246, 0.22), transparent 34rem),
+        radial-gradient(circle at 95% 10%, rgba(168, 85, 247, 0.16), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+    }
+
+    main {
+      width: min(56rem, 100%);
+      margin-inline: auto;
+      padding: 0.85rem;
+      padding-bottom: 5rem;
+    }
+
+    h1, h2, h3 { margin: 0; line-height: 1.15; }
+    h1 { font-size: 1.65rem; }
+    h2 { font-size: 1.18rem; margin-bottom: 0.55rem; }
+    h3 { font-size: 1rem; margin-bottom: 0.35rem; }
+    p { margin: 0.35rem 0; }
+
+    .muted { color: var(--muted); font-size: 0.92rem; }
+    .tiny { color: var(--muted); font-size: 0.78rem; }
+    .strong { font-weight: 800; }
+
+    header {
+      display: grid;
+      gap: 0.7rem;
+      margin: 0.35rem 0 0.9rem;
+    }
+
+    .hero {
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 1.15rem;
+      background: rgba(15, 23, 42, 0.72);
+      box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.2);
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 1.05rem;
+      padding: 0.9rem;
+      margin: 0.75rem 0;
+      background: rgba(23, 32, 51, 0.82);
+    }
+
+    .row { display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.82rem;
+      margin-bottom: 0.25rem;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      min-height: 2.85rem;
+      border-radius: 0.8rem;
+      border: 1px solid var(--line);
+      padding: 0.72rem;
+      font: inherit;
+      background: rgba(15, 23, 42, 0.82);
+      color: var(--text);
+    }
+
+    textarea { min-height: 5.2rem; resize: vertical; }
+
+    button {
+      border: 0;
+      background: var(--blue);
+      color: white;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: rgba(148, 163, 184, 0.18);
+      border: 1px solid var(--line);
+    }
+
+    button.danger { background: var(--red); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.28rem;
+      padding: 0.35rem;
+      margin: 0 -0.35rem 0.8rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(0.8rem);
+    }
+
+    nav button {
+      min-height: 2.45rem;
+      padding: 0.45rem 0.25rem;
+      border-radius: 0.75rem;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    nav button.active {
+      background: var(--blue);
+      color: white;
+    }
+
+    section.screen { display: none; }
+    section.screen.active { display: block; }
+
+    .stat {
+      min-height: 4.4rem;
+      padding: 0.75rem;
+      border-radius: 0.85rem;
+      background: rgba(255, 255, 255, 0.055);
+      border: 1px solid var(--line);
+    }
+
+    .stat .value { font-size: 1.25rem; font-weight: 900; margin-top: 0.1rem; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.58rem;
+      border-radius: 999rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+
+    .visited { color: var(--green); }
+    .new { color: var(--yellow); }
+    .stale { color: var(--amber); }
+    .blocked { color: var(--red); }
+    .target { color: var(--purple); }
+
+    .fog-grid {
+      --cells: 9;
+      display: grid;
+      grid-template-columns: repeat(var(--cells), minmax(0, 1fr));
+      gap: 0.18rem;
+      width: min(100%, 31rem);
+      margin: 0.8rem auto 0.5rem;
+    }
+
+    .cartographer-panel {
+      margin-top: 0.85rem;
+    }
+
+    .tile-cell {
+      aspect-ratio: 1;
+      border-radius: 0.24rem;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      display: grid;
+      place-items: center;
+      font-size: 0.58rem;
+      font-weight: 900;
+      color: rgba(255, 255, 255, 0.82);
+      user-select: none;
+    }
+
+    .tile-current { outline: 3px solid white; outline-offset: -3px; }
+    .tile-selected { box-shadow: inset 0 0 0 3px #f8fafc, 0 0 0 2px #0f172a; }
+    .tile-new { background: rgba(250, 204, 21, 0.18); }
+    .tile-visited { background: rgba(34, 197, 94, 0.48); }
+    .tile-low { background: rgba(59, 130, 246, 0.42); }
+    .tile-stale { background: rgba(245, 158, 11, 0.58); }
+    .tile-inaccessible { background: repeating-linear-gradient(135deg, rgba(239, 68, 68, 0.72), rgba(239, 68, 68, 0.72) 5px, rgba(15, 23, 42, 0.8) 5px, rgba(15, 23, 42, 0.8) 10px); }
+    .tile-target { box-shadow: inset 0 0 0 3px var(--purple); }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.35rem 0.8rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 0.78rem;
+      height: 0.78rem;
+      border-radius: 0.18rem;
+      margin-right: 0.35rem;
+      vertical-align: -0.1rem;
+      background: var(--swatch);
+    }
+
+    .list {
+      display: grid;
+      gap: 0.55rem;
+      margin-top: 0.65rem;
+    }
+
+    .item {
+      padding: 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    code {
+      word-break: break-word;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0.08rem 0.25rem;
+      border-radius: 0.25rem;
+    }
+
+    @media (max-width: 42rem) {
+      .grid2, .grid3 { grid-template-columns: 1fr; }
+      h1 { font-size: 1.45rem; }
+      nav button { font-size: 0.7rem; }
+      .card { padding: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="row">
+      <span class="status-pill">🧭 Tile Hunter</span>
+      <span id="installStatus" class="status-pill">Standalone PWA</span>
+    </div>
+    <div>
+      <h1>Your real-world tile RPG</h1>
+      <p class="muted">Load your private 250m tile CSV, hunt new ground, mark impossible tiles, and build your little realm. No Runalytics code required once the CSV exists.</p>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>Tile database</h2>
+    <p id="dataStatus" class="muted">No tile lookup loaded yet. Choose <code>mobile_tile_lookup_250m.csv</code>.</p>
+    <div class="grid2">
+      <div>
+        <label for="csvFile">Private tile CSV</label>
+        <input id="csvFile" type="file" accept=".csv,text/csv">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button id="loadCsvButton" type="button">Load / refresh tile data</button>
+      </div>
+    </div>
+    <p class="tiny">Tile data is stored locally in this browser using IndexedDB. Field notes and realm state stay local until you export them.</p>
+  </section>
+
+  <nav aria-label="Game modes">
+    <button class="active" data-screen="hunter">Hunter</button>
+    <button data-screen="fog">Fog</button>
+    <button data-screen="quests">Quests</button>
+    <button data-screen="realm">Realm</button>
+  </nav>
+
+  <section id="hunter" class="screen active">
+    <div class="card">
+      <h2>Current tile</h2>
+      <div class="grid2">
+        <button id="locateButton" type="button">Use current location</button>
+        <button id="scoreTileButton" class="secondary" type="button">Score current tile</button>
+      </div>
+      <div class="grid2">
+        <div>
+          <label for="latitude">Latitude</label>
+          <input id="latitude" inputmode="decimal" placeholder="e.g. 50.620000">
+        </div>
+        <div>
+          <label for="longitude">Longitude</label>
+          <input id="longitude" inputmode="decimal" placeholder="e.g. -3.410000">
+        </div>
+      </div>
+      <button id="manualLookupButton" class="secondary" type="button">Check pasted coordinates</button>
+    </div>
+
+    <div class="card">
+      <h2>Tile result</h2>
+      <p id="tileResult" class="strong">Load data, then check your location.</p>
+      <p id="tileDetails" class="muted"></p>
+      <div class="grid3">
+        <div class="stat"><div class="muted">Session XP</div><div id="sessionXp" class="value">0</div></div>
+        <div class="stat"><div class="muted">New/stale hits</div><div id="sessionHits" class="value">0</div></div>
+        <div class="stat"><div class="muted">Current resource</div><div id="currentResource" class="value">—</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fog" class="screen">
+    <div class="card">
+      <h2>Fog grid</h2>
+      <p class="muted">A 9×9 tile view around your current tile. This is intentionally map-free: a fast tactical grid for deciding which way to drift.</p>
+      <div id="fogGrid" class="fog-grid" aria-label="Local tile grid"></div>
+      <div class="legend">
+        <span style="--swatch: rgba(34,197,94,0.7)">Visited</span>
+        <span style="--swatch: rgba(245,158,11,0.8)">Stale</span>
+        <span style="--swatch: rgba(59,130,246,0.65)">Low visit</span>
+        <span style="--swatch: rgba(250,204,21,0.45)">Unknown/new</span>
+        <span style="--swatch: rgba(168,85,247,0.75)">Quest target</span>
+        <span style="--swatch: rgba(239,68,68,0.8)">Inaccessible</span>
+      </div>
+      <div class="cartographer-panel">
+        <h2>Cartographer</h2>
+      <p class="muted">Tap any tile above, then tag it here. Collection status comes from your tile CSV; field tags are mutable notes you can update or clear.</p>
+        <div id="selectedTileSummary" class="item">
+          <h3>Selected tile</h3>
+          <p class="muted">Tap a tile in the grid to inspect or tag it.</p>
+        </div>
+      </div>
+      <div class="grid2">
+        <div>
+          <label for="tileStatus">Tag selected tile as</label>
+          <select id="tileStatus">
+            <option value="unknown">Unknown / unvisited</option>
+            <option value="collected">Collected / visited</option>
+            <option value="target">Target / investigate later</option>
+            <option value="likely_accessible">Likely accessible</option>
+            <option value="inaccessible">Inaccessible</option>
+            <option value="access_changed">Access changed</option>
+            <option value="questionable">Questionable / GPS anomaly</option>
+            <option value="note">General note</option>
+          </select>
+        </div>
+        <div>
+          <label for="tileReason">Reason</label>
+          <select id="tileReason">
+            <option value="unclear">Unclear / needs checking</option>
+            <option value="water">Water</option>
+            <option value="private_land">Private land</option>
+            <option value="unsafe">Unsafe road / access</option>
+            <option value="no_public_access">No public access</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <label for="tileNote">Comment</label>
+      <textarea id="tileNote" placeholder="e.g. river, private driveway, looks possible from coast path..."></textarea>
+      <div class="grid3">
+        <button id="saveNoteButton" type="button">Save / update selected tile</button>
+        <button id="clearNoteButton" class="secondary" type="button">Clear selected tile tag</button>
+        <button id="exportNotesButton" class="secondary" type="button">Export field notes JSON</button>
+      </div>
+      <p id="noteStatus" class="muted"></p>
+      <div id="notesList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="quests" class="screen">
+    <div class="card">
+      <h2>Quest generator</h2>
+      <div class="grid3">
+        <div>
+          <label for="plannedDistance">Planned distance km</label>
+          <input id="plannedDistance" inputmode="decimal" type="number" min="1" step="0.5" value="8">
+        </div>
+        <div>
+          <label for="questMode">Quest type</label>
+          <select id="questMode">
+            <option value="mixed">Mixed adventure</option>
+            <option value="new">New tiles</option>
+            <option value="stale">Stale tiles</option>
+            <option value="low">Low-visit tiles</option>
+          </select>
+        </div>
+        <div>
+          <label for="staleMonths">Stale after months</label>
+          <input id="staleMonths" inputmode="numeric" type="number" min="1" step="1" value="12">
+        </div>
+      </div>
+      <button id="generateQuestButton" type="button">Generate quest</button>
+      <p id="questSummary" class="muted"></p>
+      <div id="questList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="realm" class="screen">
+    <div class="card">
+      <h2>Realm</h2>
+      <p class="muted">A first lightweight RPG layer. The rules are intentionally simple for now: exploration builds resources, stale visits restore morale, and enough XP levels you up.</p>
+      <div class="grid3">
+        <div class="stat"><div class="muted">Level</div><div id="realmLevel" class="value">1</div></div>
+        <div class="stat"><div class="muted">Total XP</div><div id="realmXp" class="value">0</div></div>
+        <div class="stat"><div class="muted">Title</div><div id="realmTitle" class="value">Walker</div></div>
+      </div>
+      <div class="grid3">
+        <div class="stat"><div class="muted">Coin</div><div id="resourceCoin" class="value">0</div></div>
+        <div class="stat"><div class="muted">Wood</div><div id="resourceWood" class="value">0</div></div>
+        <div class="stat"><div class="muted">Stone</div><div id="resourceStone" class="value">0</div></div>
+        <div class="stat"><div class="muted">Fish</div><div id="resourceFish" class="value">0</div></div>
+        <div class="stat"><div class="muted">Morale</div><div id="resourceMorale" class="value">0</div></div>
+        <div class="stat"><div class="muted">Dragon signs</div><div id="dragonSigns" class="value">0</div></div>
+      </div>
+      <div class="grid2">
+        <button id="exportStateButton" class="secondary" type="button">Export game state</button>
+        <button id="resetSessionButton" class="danger" type="button">Reset session score</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const TILE_SIZE_M = 250;
+  const EARTH_HALF_CIRCUMFERENCE_M = 20037508.34;
+  const DB_NAME = "tile-hunter-db";
+  const DB_VERSION = 1;
+  const todayIso = () => new Date().toISOString().slice(0, 10);
+
+  const state = {
+    db: null,
+    tiles: new Map(),
+    notes: new Map(),
+    currentTile: null,
+    selectedTile: null,
+    questTargets: new Map(JSON.parse(localStorage.getItem("tileHunterQuestTargets") || "[]")),
+    session: JSON.parse(localStorage.getItem("tileHunterSession") || '{"xp":0,"hits":0,"scoredTiles":[]}'),
+    realm: JSON.parse(localStorage.getItem("tileHunterRealm") || '{"xp":0,"resources":{"coin":0,"wood":0,"stone":0,"fish":0,"morale":0},"dragonSigns":0}')
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  function openDb() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains("tiles")) db.createObjectStore("tiles", { keyPath: "tile_id" });
+        if (!db.objectStoreNames.contains("notes")) db.createObjectStore("notes", { keyPath: "tile_id" });
+        if (!db.objectStoreNames.contains("meta")) db.createObjectStore("meta", { keyPath: "key" });
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function storePutMany(storeName, rows) {
+    return new Promise((resolve, reject) => {
+      const tx = state.db.transaction(storeName, "readwrite");
+      const store = tx.objectStore(storeName);
+      for (const row of rows) store.put(row);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  function storeReplaceAll(storeName, rows) {
+    return new Promise((resolve, reject) => {
+      const tx = state.db.transaction(storeName, "readwrite");
+      const store = tx.objectStore(storeName);
+      store.clear();
+      for (const row of rows) store.put(row);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  function storeGetAll(storeName) {
+    return new Promise((resolve, reject) => {
+      const tx = state.db.transaction(storeName, "readonly");
+      const request = tx.objectStore(storeName).getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function storeDelete(storeName, key) {
+    return new Promise((resolve, reject) => {
+      const tx = state.db.transaction(storeName, "readwrite");
+      tx.objectStore(storeName).delete(key);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  function metaPut(key, value) {
+    return storePutMany("meta", [{ key, value }]);
+  }
+
+  function parseCsv(text) {
+    const lines = text.trim().split(/\r?\n/).filter(Boolean);
+    if (lines.length < 2) throw new Error("CSV did not contain any tile rows.");
+    const headers = lines[0].split(",").map((value) => value.trim());
+    const required = ["tile_id", "tile_x", "tile_y", "visit_count", "first_seen_date", "latest_seen_date"];
+    for (const column of required) {
+      if (!headers.includes(column)) throw new Error(`CSV is missing required column: ${column}`);
+    }
+    const ix = Object.fromEntries(headers.map((header, i) => [header, i]));
+    return lines.slice(1).map((line) => {
+      const cells = line.split(",");
+      const tileId = cells[ix.tile_id];
+      return {
+        tile_id: tileId,
+        tile_size_m: Number(cells[ix.tile_size_m] || TILE_SIZE_M),
+        tile_x: Number(cells[ix.tile_x]),
+        tile_y: Number(cells[ix.tile_y]),
+        visit_count: Number(cells[ix.visit_count] || 0),
+        first_seen_date: cells[ix.first_seen_date] || "",
+        latest_seen_date: cells[ix.latest_seen_date] || ""
+      };
+    }).filter((row) => row.tile_id && Number.isFinite(row.tile_x) && Number.isFinite(row.tile_y));
+  }
+
+  function readFileAsText(file) {
+    if (file.text) return file.text();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error("Could not read file"));
+      reader.readAsText(file);
+    });
+  }
+
+  function lonLatToWebMercator(longitude, latitude) {
+    const x = longitude * EARTH_HALF_CIRCUMFERENCE_M / 180;
+    const yDegrees = Math.log(Math.tan((90 + latitude) * Math.PI / 360)) / (Math.PI / 180);
+    const y = yDegrees * EARTH_HALF_CIRCUMFERENCE_M / 180;
+    return { x, y };
+  }
+
+  function coordinateToTile(latitude, longitude) {
+    const { x, y } = lonLatToWebMercator(longitude, latitude);
+    const tileX = Math.floor(x / TILE_SIZE_M) * TILE_SIZE_M;
+    const tileY = Math.floor(y / TILE_SIZE_M) * TILE_SIZE_M;
+    return { tile_id: `${tileX}_${tileY}`, tile_x: tileX, tile_y: tileY, x, y };
+  }
+
+  function tileIdFromXY(tileX, tileY) {
+    return `${tileX}_${tileY}`;
+  }
+
+  function monthsSince(dateString) {
+    if (!dateString) return Infinity;
+    const date = new Date(`${dateString}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return Infinity;
+    const now = new Date();
+    return (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
+  }
+
+  function tileStatus(tile) {
+    const note = state.notes.get(tile.tile_id);
+    const fieldStatus = note?.field_status || note?.status;
+    if (fieldStatus === "inaccessible") return "inaccessible";
+    if (fieldStatus === "target") return "target";
+    if (fieldStatus === "likely_accessible") return "likely_accessible";
+    if (fieldStatus === "access_changed") return "access_changed";
+    if (fieldStatus === "questionable") return "questionable";
+    if (state.questTargets.has(tile.tile_id)) return "target";
+    const visit = state.tiles.get(tile.tile_id);
+    if (!visit) return "new";
+    if (monthsSince(visit.latest_seen_date) >= Number($("staleMonths").value || 12)) return "stale";
+    if (visit.visit_count <= 2) return "low";
+    return "visited";
+  }
+
+  function tileDistanceAndDirection(tile) {
+    if (!state.currentTile || !tile) {
+      return { distanceText: "", direction: "" };
+    }
+    const dx = Math.round((tile.tile_x - state.currentTile.tile_x) / TILE_SIZE_M);
+    const dy = Math.round((tile.tile_y - state.currentTile.tile_y) / TILE_SIZE_M);
+    const metres = distanceM(state.currentTile, tile);
+    return {
+      distanceText: `${(metres / 1000).toFixed(2)} km`,
+      direction: directionFromDelta(dx, dy)
+    };
+  }
+
+  function collectionStatus(tile) {
+    if (!tile) return "unknown";
+    return state.tiles.has(tile.tile_id) ? "collected" : "uncollected";
+  }
+
+  function setStatusOptions(tile, selectedValue = null) {
+    const collected = collectionStatus(tile) === "collected";
+    const options = collected
+      ? [
+          ["collected", "Collected / visited"],
+          ["target", "Target revisit"],
+          ["access_changed", "Access changed"],
+          ["questionable", "Questionable / GPS anomaly"],
+          ["note", "General note"],
+          ["inaccessible", "Inaccessible override"]
+        ]
+      : [
+          ["unknown", "Unknown / unvisited"],
+          ["target", "Target / investigate later"],
+          ["likely_accessible", "Likely accessible"],
+          ["inaccessible", "Inaccessible"],
+          ["questionable", "Questionable / needs checking"],
+          ["note", "General note"]
+        ];
+    $("tileStatus").innerHTML = options
+      .map(([value, label]) => `<option value="${value}">${label}</option>`)
+      .join("");
+    $("tileStatus").value = selectedValue && options.some(([value]) => value === selectedValue)
+      ? selectedValue
+      : collected
+        ? "collected"
+        : "target";
+  }
+
+  function describeTile(tile) {
+    if (!tile) {
+      return '<p class="muted">No tile selected yet.</p>';
+    }
+    const visit = state.tiles.get(tile.tile_id);
+    const note = state.notes.get(tile.tile_id);
+    const fieldStatus = note?.field_status || note?.status;
+    const status = tileStatus(tile);
+    const fieldStatus = note?.field_status || note?.status;
+    const { distanceText, direction } = tileDistanceAndDirection(tile);
+    const resource = resourceForTile(tile.tile_id);
+    const parts = [
+      `<p><span class="status-pill">${statusLabel(status)}</span></p>`,
+      `<p>Tile: <code>${tile.tile_id}</code></p>`,
+      state.currentTile && tile.tile_id !== state.currentTile.tile_id
+        ? `<p class="muted">${distanceText} ${direction} of current tile</p>`
+        : state.currentTile
+          ? '<p class="muted">This is your current tile.</p>'
+          : "",
+      visit
+        ? `<p class="muted">Visits: <strong>${visit.visit_count}</strong> · first ${visit.first_seen_date} · latest ${visit.latest_seen_date}</p>`
+        : '<p class="muted">No previous visit in loaded lookup.</p>',
+      `<p class="muted">Collection status: <strong>${collectionStatus(tile)}</strong></p>`,
+      `<p class="muted">Resource: <strong>${resource}</strong></p>`,
+      note
+        ? `<p class="muted">Field status: <strong>${fieldStatus}</strong> · ${note.reason || "no reason"}${note.comment ? " · " + note.comment : ""}</p>`
+        : '<p class="muted">No Cartographer tag yet.</p>'
+    ];
+    return parts.filter(Boolean).join("");
+  }
+
+  function syncNoteForm(tile) {
+    const note = tile ? state.notes.get(tile.tile_id) : null;
+    setStatusOptions(tile, note?.field_status || note?.status);
+    $("tileReason").value = note?.reason || "unclear";
+    $("tileNote").value = note?.comment || "";
+  }
+
+  function renderSelectedTile() {
+    const html = `<h3>Selected tile</h3>${describeTile(state.selectedTile)}`;
+    $("selectedTileSummary").innerHTML = html;
+  }
+
+  function selectTile(tile, sourceText = "") {
+    state.selectedTile = tile;
+    syncNoteForm(tile);
+    renderSelectedTile();
+    renderFogGrid();
+    if (sourceText) {
+      $("noteStatus").textContent = sourceText;
+    }
+  }
+
+  function saveQuestTargets() {
+    localStorage.setItem(
+      "tileHunterQuestTargets",
+      JSON.stringify(Array.from(state.questTargets.entries()))
+    );
+  }
+
+  function statusLabel(status) {
+    return {
+      inaccessible: "Inaccessible",
+      target: "Quest target",
+      likely_accessible: "Likely accessible",
+      access_changed: "Access changed",
+      questionable: "Questionable",
+      new: "New / unknown",
+      stale: "Stale",
+      low: "Low visit",
+      visited: "Visited"
+    }[status] || status;
+  }
+
+  function resourceForTile(tileId) {
+    const resources = ["coin", "wood", "stone", "fish"];
+    let hash = 0;
+    for (const char of tileId) hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0;
+    return resources[Math.abs(hash) % resources.length];
+  }
+
+  function directionFromDelta(dx, dy) {
+    const eastWest = dx > 0 ? "east" : dx < 0 ? "west" : "";
+    const northSouth = dy > 0 ? "north" : dy < 0 ? "south" : "";
+    return [northSouth, eastWest].filter(Boolean).join("-") || "here";
+  }
+
+  function distanceM(a, b) {
+    return Math.hypot(a.tile_x - b.tile_x, a.tile_y - b.tile_y);
+  }
+
+  function saveSession() {
+    localStorage.setItem("tileHunterSession", JSON.stringify(state.session));
+  }
+
+  function saveRealm() {
+    localStorage.setItem("tileHunterRealm", JSON.stringify(state.realm));
+  }
+
+  function realmLevel() {
+    return Math.max(1, Math.floor(Math.sqrt(state.realm.xp / 75)) + 1);
+  }
+
+  function realmTitle(level) {
+    if (level >= 10) return "Dragon Cartographer";
+    if (level >= 7) return "Realm Warden";
+    if (level >= 5) return "Fogbreaker";
+    if (level >= 3) return "Tile Ranger";
+    return "Walker";
+  }
+
+  function updateStats() {
+    $("sessionXp").textContent = state.session.xp;
+    $("sessionHits").textContent = state.session.hits;
+    const level = realmLevel();
+    $("realmLevel").textContent = level;
+    $("realmXp").textContent = state.realm.xp;
+    $("realmTitle").textContent = realmTitle(level);
+    $("resourceCoin").textContent = state.realm.resources.coin || 0;
+    $("resourceWood").textContent = state.realm.resources.wood || 0;
+    $("resourceStone").textContent = state.realm.resources.stone || 0;
+    $("resourceFish").textContent = state.realm.resources.fish || 0;
+    $("resourceMorale").textContent = state.realm.resources.morale || 0;
+    $("dragonSigns").textContent = state.realm.dragonSigns || 0;
+    $("currentResource").textContent = state.currentTile ? resourceForTile(state.currentTile.tile_id) : "—";
+  }
+
+  function showCurrentTile(tile, sourceText = "") {
+    state.currentTile = tile;
+    state.selectedTile = tile;
+    const visit = state.tiles.get(tile.tile_id);
+    const note = state.notes.get(tile.tile_id);
+    const status = tileStatus(tile);
+    const statusClass = {
+      inaccessible: "blocked",
+      target: "target",
+      likely_accessible: "visited",
+      access_changed: "blocked",
+      questionable: "stale",
+      new: "new",
+      stale: "stale",
+      low: "visited",
+      visited: "visited"
+    }[status] || "";
+
+    $("tileResult").innerHTML = `<span class="${statusClass}">${statusLabel(status)}</span>`;
+    const lines = [
+      sourceText,
+      `Tile: <code>${tile.tile_id}</code>`,
+      visit ? `Visits: <strong>${visit.visit_count}</strong>` : "No previous visit in loaded lookup.",
+      visit ? `First seen: <strong>${visit.first_seen_date}</strong>` : "",
+      visit ? `Latest seen: <strong>${visit.latest_seen_date}</strong>` : "",
+      note ? `Field note: <strong>${fieldStatus}</strong> · ${note.reason || "no reason"} ${note.comment ? "· " + note.comment : ""}` : ""
+    ].filter(Boolean);
+    $("tileDetails").innerHTML = lines.join("<br>");
+    syncNoteForm(tile);
+    renderSelectedTile();
+    updateStats();
+    renderFogGrid();
+    renderNotes();
+  }
+
+  function locate() {
+    if (!navigator.geolocation) {
+      $("tileResult").textContent = "Location is not available in this browser.";
+      return;
+    }
+    $("tileResult").textContent = "Getting current location…";
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        $("latitude").value = latitude.toFixed(6);
+        $("longitude").value = longitude.toFixed(6);
+        showCurrentTile(coordinateToTile(latitude, longitude), `Accuracy: ~${Math.round(position.coords.accuracy)}m`);
+      },
+      (error) => {
+        $("tileResult").textContent = "Could not get current location.";
+        $("tileDetails").textContent = error.message || "Try pasted coordinates instead.";
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+    );
+  }
+
+  function manualLookup() {
+    const latitude = Number($("latitude").value);
+    const longitude = Number($("longitude").value);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      $("tileResult").textContent = "Please enter valid latitude and longitude.";
+      $("tileDetails").textContent = "";
+      return;
+    }
+    showCurrentTile(coordinateToTile(latitude, longitude), "Manual coordinate lookup");
+  }
+
+  function scoreCurrentTile() {
+    if (!state.currentTile) {
+      $("tileResult").textContent = "Check your current tile first.";
+      return;
+    }
+    if (state.session.scoredTiles.includes(state.currentTile.tile_id)) {
+      $("tileDetails").innerHTML += "<br>Already scored this tile in this session.";
+      return;
+    }
+
+    const status = tileStatus(state.currentTile);
+    const resource = resourceForTile(state.currentTile.tile_id);
+    let xp = 1;
+    if (status === "new") xp = 10;
+    if (status === "stale") xp = 6;
+    if (status === "low") xp = 3;
+    if (status === "inaccessible") xp = 2;
+    if (status === "likely_accessible") xp = 2;
+    if (status === "access_changed") xp = 2;
+    if (status === "questionable") xp = 2;
+    if (status === "target") xp = 8;
+
+    state.session.xp += xp;
+    state.session.hits += ["new", "stale", "target"].includes(status) ? 1 : 0;
+    state.session.scoredTiles.push(state.currentTile.tile_id);
+    state.realm.xp += xp;
+    if (status === "stale") state.realm.resources.morale = (state.realm.resources.morale || 0) + 1;
+    else state.realm.resources[resource] = (state.realm.resources[resource] || 0) + 1;
+    if (status === "new" && Math.random() < 0.08) state.realm.dragonSigns = (state.realm.dragonSigns || 0) + 1;
+    saveSession();
+    saveRealm();
+    showCurrentTile(state.currentTile, `Scored +${xp} XP`);
+  }
+
+  function renderFogGrid() {
+    const grid = $("fogGrid");
+    grid.innerHTML = "";
+    if (!state.currentTile) {
+      grid.innerHTML = '<p class="muted">Check your location first.</p>';
+      return;
+    }
+    const radius = 4;
+    for (let row = radius; row >= -radius; row--) {
+      for (let col = -radius; col <= radius; col++) {
+        const tile = {
+          tile_x: state.currentTile.tile_x + col * TILE_SIZE_M,
+          tile_y: state.currentTile.tile_y + row * TILE_SIZE_M
+        };
+        tile.tile_id = tileIdFromXY(tile.tile_x, tile.tile_y);
+        const status = tileStatus(tile);
+        const div = document.createElement("div");
+        const visualStatus = {
+          likely_accessible: "low",
+          access_changed: "inaccessible",
+          questionable: "stale"
+        }[status] || status;
+        div.className = `tile-cell tile-${visualStatus === "target" ? (state.tiles.has(tile.tile_id) ? "target tile-visited" : "target tile-new") : visualStatus}`;
+        if (tile.tile_id === state.currentTile.tile_id) div.classList.add("tile-current");
+        if (state.selectedTile && tile.tile_id === state.selectedTile.tile_id) div.classList.add("tile-selected");
+        const visit = state.tiles.get(tile.tile_id);
+        div.textContent = tile.tile_id === state.currentTile.tile_id ? "●" : visit ? Math.min(visit.visit_count, 99) : "";
+        div.title = `${tile.tile_id} · ${statusLabel(status)}`;
+        div.addEventListener("click", () => selectTile(tile, "Selected from fog grid."));
+        grid.appendChild(div);
+      }
+    }
+  }
+
+  function generateQuest() {
+    if (!state.currentTile) {
+      $("questSummary").textContent = "Check your current tile first.";
+      return;
+    }
+    const plannedKm = Number($("plannedDistance").value || 8);
+    const mode = $("questMode").value;
+    const staleMonths = Number($("staleMonths").value || 12);
+    const usefulRadiusM = Math.max(TILE_SIZE_M, plannedKm * 1000 * 0.45);
+    const radiusTiles = Math.ceil(usefulRadiusM / TILE_SIZE_M);
+    const candidates = [];
+
+    for (let dx = -radiusTiles; dx <= radiusTiles; dx++) {
+      for (let dy = -radiusTiles; dy <= radiusTiles; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const tile = {
+          tile_x: state.currentTile.tile_x + dx * TILE_SIZE_M,
+          tile_y: state.currentTile.tile_y + dy * TILE_SIZE_M
+        };
+        tile.tile_id = tileIdFromXY(tile.tile_x, tile.tile_y);
+        const note = state.notes.get(tile.tile_id);
+        const fieldStatus = note?.field_status || note?.status;
+        if (fieldStatus === "inaccessible") continue;
+        const visit = state.tiles.get(tile.tile_id);
+        const dist = distanceM(state.currentTile, tile);
+        if (dist > usefulRadiusM) continue;
+        const isNew = !visit;
+        const isStale = visit && monthsSince(visit.latest_seen_date) >= staleMonths;
+        const isLow = visit && visit.visit_count <= 2;
+        let kind = null;
+        let score = Math.round((usefulRadiusM - dist) / 100);
+        if (isNew && (mode === "new" || mode === "mixed")) { kind = "new"; score += 100; }
+        else if (isStale && (mode === "stale" || mode === "mixed")) { kind = "stale"; score += 75 + monthsSince(visit.latest_seen_date); }
+        else if (isLow && (mode === "low" || mode === "mixed")) { kind = "low"; score += 45; }
+        if (!kind) continue;
+        candidates.push({ tile, visit, kind, score, dist, direction: directionFromDelta(dx, dy) });
+      }
+    }
+
+    candidates.sort((a, b) => b.score - a.score || a.dist - b.dist);
+    const selected = candidates.slice(0, 5);
+    state.questTargets = new Map(selected.map((target) => [target.tile.tile_id, target]));
+    saveQuestTargets();
+    $("questSummary").textContent = selected.length
+      ? `${selected.length} target tiles found within a sensible ${plannedKm} km quest envelope.`
+      : "No obvious target tiles found for this distance/mode. Try a longer distance or mixed mode.";
+    $("questList").innerHTML = selected.map((target, index) => {
+      const latest = target.visit ? `Latest: ${target.visit.latest_seen_date}` : "Unvisited in lookup";
+      return `<div class="item">
+        <h3>${index + 1}. ${statusLabel(target.kind)} · ${target.direction}</h3>
+        <p><code>${target.tile.tile_id}</code></p>
+        <p class="muted">Straight-line: ${(target.dist / 1000).toFixed(2)} km · ${latest}</p>
+        <button class="secondary" type="button" data-select-quest="${target.tile.tile_id}">Select this tile</button>
+      </div>`;
+    }).join("");
+    document.querySelectorAll("[data-select-quest]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = state.questTargets.get(button.dataset.selectQuest);
+        if (target) selectTile(target.tile, "Selected from quest list.");
+      });
+    });
+    renderFogGrid();
+  }
+
+  async function saveNote() {
+    if (!state.selectedTile) {
+      $("noteStatus").textContent = "Select a tile first: use Hunter or tap one in Fog.";
+      return;
+    }
+    const note = {
+      tile_id: state.selectedTile.tile_id,
+      tile_size_m: TILE_SIZE_M,
+      tile_x: state.selectedTile.tile_x,
+      tile_y: state.selectedTile.tile_y,
+      collection_status_at_recording: collectionStatus(state.selectedTile),
+      field_status: $("tileStatus").value,
+      reason: $("tileReason").value,
+      comment: $("tileNote").value.trim(),
+      recorded_at: new Date().toISOString()
+    };
+    await storePutMany("notes", [note]);
+    state.notes.set(note.tile_id, note);
+    $("noteStatus").textContent = `Saved ${note.field_status} note for ${note.tile_id}.`;
+    syncNoteForm(state.selectedTile);
+    renderSelectedTile();
+    renderNotes();
+    renderFogGrid();
+  }
+
+  async function clearSelectedNote() {
+    if (!state.selectedTile) {
+      $("noteStatus").textContent = "Select a tile first: use Hunter or tap one in Fog.";
+      return;
+    }
+    await storeDelete("notes", state.selectedTile.tile_id);
+    state.notes.delete(state.selectedTile.tile_id);
+    $("noteStatus").textContent = `Cleared Cartographer tag for ${state.selectedTile.tile_id}.`;
+    syncNoteForm(state.selectedTile);
+    renderSelectedTile();
+    renderNotes();
+    renderFogGrid();
+  }
+
+  function renderNotes() {
+    const notes = Array.from(state.notes.values()).sort((a, b) => b.recorded_at.localeCompare(a.recorded_at));
+    $("notesList").innerHTML = notes.slice(0, 8).map((note) => `
+      <div class="item">
+        <h3>${note.field_status || note.status} · ${note.reason}</h3>
+        <p><code>${note.tile_id}</code></p>
+        <p class="muted">${note.collection_status_at_recording || "unknown"} · ${note.comment || "No comment"} · ${note.recorded_at.slice(0, 10)}</p>
+      </div>
+    `).join("") || '<p class="muted">No field notes yet.</p>';
+  }
+
+  function downloadJson(filename, data) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportNotes() {
+    downloadJson(`tile_hunter_field_notes_${todayIso()}.json`, {
+      exported_at: new Date().toISOString(),
+      tile_size_m: TILE_SIZE_M,
+      notes: Array.from(state.notes.values()),
+      quest_targets: Array.from(state.questTargets.values())
+    });
+  }
+
+  function exportState() {
+    downloadJson(`tile_hunter_state_${todayIso()}.json`, {
+      exported_at: new Date().toISOString(),
+      session: state.session,
+      realm: state.realm,
+      notes: Array.from(state.notes.values()),
+      quest_targets: Array.from(state.questTargets.values())
+    });
+  }
+
+  async function loadCsv() {
+    const file = $("csvFile").files[0];
+    if (!file) {
+      $("dataStatus").textContent = "Choose the mobile tile lookup CSV first.";
+      return;
+    }
+    $("dataStatus").textContent = `Loading ${file.name}…`;
+    const rows = parseCsv(await readFileAsText(file));
+    await storeReplaceAll("tiles", rows);
+    await metaPut("tile_csv", { filename: file.name, loaded_at: new Date().toISOString(), count: rows.length });
+    state.tiles = new Map(rows.map((row) => [row.tile_id, row]));
+    $("dataStatus").textContent = `${file.name} loaded · ${rows.length.toLocaleString()} visited tiles stored locally.`;
+    renderSelectedTile();
+    renderFogGrid();
+  }
+
+  async function hydrateFromDb() {
+    state.db = await openDb();
+    const [tiles, notes] = await Promise.all([storeGetAll("tiles"), storeGetAll("notes")]);
+    state.tiles = new Map(tiles.map((row) => [row.tile_id, row]));
+    state.notes = new Map(notes.map((row) => [
+      row.tile_id,
+      {
+        ...row,
+        field_status: row.field_status || row.status || "unknown",
+        collection_status_at_recording: row.collection_status_at_recording || "unknown"
+      }
+    ]));
+    $("dataStatus").textContent = state.tiles.size
+      ? `${state.tiles.size.toLocaleString()} visited tiles loaded from this browser. You can refresh with a new CSV any time.`
+      : "No tile lookup loaded yet. Choose mobile_tile_lookup_250m.csv.";
+    renderNotes();
+    renderSelectedTile();
+    renderFogGrid();
+    updateStats();
+  }
+
+  function bindEvents() {
+    document.querySelectorAll("nav button").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("nav button").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll("section.screen").forEach((screen) => screen.classList.remove("active"));
+        button.classList.add("active");
+        $(button.dataset.screen).classList.add("active");
+      });
+    });
+    $("loadCsvButton").addEventListener("click", loadCsv);
+    $("locateButton").addEventListener("click", locate);
+    $("manualLookupButton").addEventListener("click", manualLookup);
+    $("scoreTileButton").addEventListener("click", scoreCurrentTile);
+    $("generateQuestButton").addEventListener("click", generateQuest);
+    $("saveNoteButton").addEventListener("click", saveNote);
+    $("clearNoteButton").addEventListener("click", clearSelectedNote);
+    $("exportNotesButton").addEventListener("click", exportNotes);
+    $("exportStateButton").addEventListener("click", exportState);
+    $("resetSessionButton").addEventListener("click", () => {
+      state.session = { xp: 0, hits: 0, scoredTiles: [] };
+      saveSession();
+      updateStats();
+    });
+  }
+
+  async function start() {
+    bindEvents();
+    if ("serviceWorker" in navigator && location.protocol !== "file:") {
+      try {
+        await navigator.serviceWorker.register("./service-worker.js");
+        $("installStatus").textContent = "Offline-ready after install";
+      } catch (error) {
+        $("installStatus").textContent = "PWA cache unavailable";
+      }
+    } else {
+      $("installStatus").textContent = "Local/static app";
+    }
+    await hydrateFromDb();
+  }
+
+  start().catch((error) => {
+    $("dataStatus").textContent = `Could not start Tile Hunter: ${error.message}`;
+  });
+</script>
+</body>
+</html>
