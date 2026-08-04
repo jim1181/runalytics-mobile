@@ -445,21 +445,39 @@
   const DB_VERSION = 1;
   const todayIso = () => new Date().toISOString().slice(0, 10);
 
+  function readLocalJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function questTargetEntries() {
+    const entries = readLocalJson("tileHunterQuestTargets", []);
+    return Array.isArray(entries) ? entries : [];
+  }
+
   const state = {
     db: null,
     tiles: new Map(),
     notes: new Map(),
     currentTile: null,
     selectedTile: null,
-    questTargets: new Map(JSON.parse(localStorage.getItem("tileHunterQuestTargets") || "[]")),
-    session: JSON.parse(localStorage.getItem("tileHunterSession") || '{"xp":0,"hits":0,"scoredTiles":[]}'),
-    realm: JSON.parse(localStorage.getItem("tileHunterRealm") || '{"xp":0,"resources":{"coin":0,"wood":0,"stone":0,"fish":0,"morale":0},"dragonSigns":0}')
+    questTargets: new Map(questTargetEntries()),
+    session: readLocalJson("tileHunterSession", { xp: 0, hits: 0, scoredTiles: [] }),
+    realm: readLocalJson("tileHunterRealm", { xp: 0, resources: { coin: 0, wood: 0, stone: 0, fish: 0, morale: 0 }, dragonSigns: 0 })
   };
 
   const $ = (id) => document.getElementById(id);
 
   function openDb() {
     return new Promise((resolve, reject) => {
+      if (!("indexedDB" in window)) {
+        reject(new Error("IndexedDB is not available in this browser."));
+        return;
+      }
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = () => {
         const db = request.result;
@@ -473,6 +491,7 @@
   }
 
   function storePutMany(storeName, rows) {
+    if (!state.db) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const tx = state.db.transaction(storeName, "readwrite");
       const store = tx.objectStore(storeName);
@@ -483,6 +502,7 @@
   }
 
   function storeReplaceAll(storeName, rows) {
+    if (!state.db) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const tx = state.db.transaction(storeName, "readwrite");
       const store = tx.objectStore(storeName);
@@ -494,6 +514,7 @@
   }
 
   function storeGetAll(storeName) {
+    if (!state.db) return Promise.resolve([]);
     return new Promise((resolve, reject) => {
       const tx = state.db.transaction(storeName, "readonly");
       const request = tx.objectStore(storeName).getAll();
@@ -503,6 +524,7 @@
   }
 
   function storeDelete(storeName, key) {
+    if (!state.db) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const tx = state.db.transaction(storeName, "readwrite");
       tx.objectStore(storeName).delete(key);
@@ -692,10 +714,14 @@
   }
 
   function saveQuestTargets() {
-    localStorage.setItem(
-      "tileHunterQuestTargets",
-      JSON.stringify(Array.from(state.questTargets.entries()))
-    );
+    try {
+      localStorage.setItem(
+        "tileHunterQuestTargets",
+        JSON.stringify(Array.from(state.questTargets.entries()))
+      );
+    } catch (error) {
+      // Quest targets still work in memory if browser storage is unavailable.
+    }
   }
 
   function statusLabel(status) {
@@ -730,11 +756,19 @@
   }
 
   function saveSession() {
-    localStorage.setItem("tileHunterSession", JSON.stringify(state.session));
+    try {
+      localStorage.setItem("tileHunterSession", JSON.stringify(state.session));
+    } catch (error) {
+      // Session scoring still works in memory if browser storage is unavailable.
+    }
   }
 
   function saveRealm() {
-    localStorage.setItem("tileHunterRealm", JSON.stringify(state.realm));
+    try {
+      localStorage.setItem("tileHunterRealm", JSON.stringify(state.realm));
+    } catch (error) {
+      // Realm state still works in memory if browser storage is unavailable.
+    }
   }
 
   function realmLevel() {
@@ -1052,18 +1086,35 @@
       $("dataStatus").textContent = "Choose the mobile tile lookup CSV first.";
       return;
     }
-    $("dataStatus").textContent = `Loading ${file.name}…`;
-    const rows = parseCsv(await readFileAsText(file));
-    await storeReplaceAll("tiles", rows);
-    await metaPut("tile_csv", { filename: file.name, loaded_at: new Date().toISOString(), count: rows.length });
-    state.tiles = new Map(rows.map((row) => [row.tile_id, row]));
-    $("dataStatus").textContent = `${file.name} loaded · ${rows.length.toLocaleString()} visited tiles stored locally.`;
-    renderSelectedTile();
-    renderFogGrid();
+    try {
+      $("dataStatus").textContent = `Loading ${file.name}…`;
+      const rows = parseCsv(await readFileAsText(file));
+      state.tiles = new Map(rows.map((row) => [row.tile_id, row]));
+      await storeReplaceAll("tiles", rows);
+      await metaPut("tile_csv", { filename: file.name, loaded_at: new Date().toISOString(), count: rows.length });
+      const storageText = state.db ? "stored locally" : "loaded for this session";
+      $("dataStatus").textContent = `${file.name} loaded · ${rows.length.toLocaleString()} visited tiles ${storageText}.`;
+      renderSelectedTile();
+      renderFogGrid();
+    } catch (error) {
+      $("dataStatus").textContent = `Could not load CSV: ${error.message}`;
+    }
   }
 
   async function hydrateFromDb() {
-    state.db = await openDb();
+    try {
+      state.db = await openDb();
+    } catch (error) {
+      state.db = null;
+      $("installStatus").textContent = "Session-only storage";
+      $("dataStatus").textContent = "Browser storage is unavailable. Load the CSV to use Tile Hunter for this session.";
+      renderNotes();
+      renderSelectedTile();
+      renderFogGrid();
+      updateStats();
+      return;
+    }
+
     const [tiles, notes] = await Promise.all([storeGetAll("tiles"), storeGetAll("notes")]);
     state.tiles = new Map(tiles.map((row) => [row.tile_id, row]));
     state.notes = new Map(notes.map((row) => [
@@ -1109,7 +1160,13 @@
   }
 
   async function start() {
-    bindEvents();
+    try {
+      bindEvents();
+    } catch (error) {
+      $("dataStatus").textContent = `Could not bind controls: ${error.message}`;
+      return;
+    }
+
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       try {
         await navigator.serviceWorker.register("./service-worker.js");
